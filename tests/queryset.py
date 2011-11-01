@@ -1879,7 +1879,7 @@ class QuerySetTest(unittest.TestCase):
                 name='test%s' % i, age=age, worth=Decimal(worths[i])).save()
 
         avg_worth = Decimal(str(round(sum(worths) / len(worths), 2)))
-        avg = sum(ages) / (len(ages) + 1) # take into account the 0
+        avg = float(sum(ages)) / (len(ages) + 1) # take into account the 0
         self.assertAlmostEqual(int(self.Person.objects.average('age')), avg)
 
         # Here I test that the average works on a custom field type.
