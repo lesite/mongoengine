@@ -966,6 +966,16 @@ class QuerySet(object):
             yield MapReduceDocument(self._document, self._collection,
                                     doc['_id'], doc['value'])
 
+    def _get_qs_to_python(self, field):
+        """This will return the qs_to_python method for a document
+        field-attribute, given the mongodb field name.
+        """
+        # Check in the _db_reverse_field_map which contains fieldnames
+        # for db fields with a different name the the model attribute
+        # name, else default to field.
+        attr = self._document._reverse_db_field_map.get(field, field)
+        return getattr(self._document, attr).qs_to_python
+
     def limit(self, n):
         """Limit the number of returned documents to `n`. This may also be
         achieved using array-slicing syntax (e.g. ``User.objects[:5]``).
@@ -1451,10 +1461,12 @@ class QuerySet(object):
             }
         """)
 
+        qs_to_python = self._get_qs_to_python(field)
+
         for result in self.map_reduce(map_func, reduce_func, output='inline'):
-            return result.value
+            return qs_to_python(result.value)
         else:
-            return 0
+            return qs_to_python(0)
 
     def average(self, field):
         """Average over the values of the specified field.
@@ -1490,10 +1502,12 @@ class QuerySet(object):
             }
         """)
 
+        qs_to_python = self._get_qs_to_python(field)
+
         for result in self.map_reduce(map_func, reduce_func, finalize_f=finalize_func, output='inline'):
-            return result.value
+            return qs_to_python(result.value)
         else:
-            return 0
+            return qs_to_python(0)
 
     def item_frequencies(self, field, normalize=False, map_reduce=True):
         """Returns a dictionary of all items present in a field across

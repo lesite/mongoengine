@@ -116,6 +116,11 @@ class BaseField(object):
         instance._data[self.name] = value
         instance._mark_as_changed(self.name)
 
+    def qs_to_python(self, value):
+        """Converts a MongoDB queryset to a Python type.
+        """
+        return value
+
     def to_python(self, value):
         """Convert a MongoDB-compatible type to a Python type.
         """

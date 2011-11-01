@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import unittest
 import pymongo
+from decimal import Decimal
 from datetime import datetime, timedelta
 
 from mongoengine.queryset import (QuerySet, QuerySetManager,
@@ -15,10 +16,35 @@ class QuerySetTest(unittest.TestCase):
 
     def setUp(self):
         connect(db='mongoenginetest')
-        
+
+        class MoneyField(IntField):
+            """
+            This is an example of a custom field type with to_python,
+            qs_to_python and to_mongo methods.
+            """
+            def __init__(
+                self, min_value=None, max_value=None, \
+                    decimal_digits=2, **kwargs):
+                self.min_value, self.max_value, self.decimal_digits = \
+                    min_value, max_value, decimal_digits
+                super(MoneyField, self).__init__(**kwargs)
+
+            def _round(self, value):
+                return Decimal(str(round(value, self.decimal_digits)))
+
+            def qs_to_python(self, value):
+                return self.to_python(value)
+
+            def to_python(self, value):
+                return self._round(value / (10 ** self.decimal_digits))
+
+            def to_mongo(self, value):
+                return int((value * (10 ** self.decimal_digits)).to_integral())
+
         class Person(Document):
             name = StringField()
             age = IntField()
+            worth = MoneyField(decimal_digits=2)
         self.Person = Person
 
     def test_initialisation(self):
@@ -1847,11 +1873,22 @@ class QuerySetTest(unittest.TestCase):
         self.assertEqual(int(self.Person.objects.average('age')), 0)
 
         ages = [23, 54, 12, 94, 27]
+        worths = [10.1, 5.2, 10.9, 3.2, 5.5]
         for i, age in enumerate(ages):
-            self.Person(name='test%s' % i, age=age).save()
+            self.Person(
+                name='test%s' % i, age=age, worth=Decimal(worths[i])).save()
 
-        avg = float(sum(ages)) / (len(ages) + 1) # take into account the 0
+        avg_worth = Decimal(str(round(sum(worths) / len(worths), 2)))
+        avg = sum(ages) / (len(ages) + 1) # take into account the 0
         self.assertAlmostEqual(int(self.Person.objects.average('age')), avg)
+
+        # Here I test that the average works on a custom field type.
+        self.assertEqual(self.Person.objects.average('worth'), avg_worth)
+
+        # Here I test that the average datatype is the datatype set in
+        # Field.qs_to_python.
+        self.assertTrue(
+            isinstance(self.Person.objects.average('worth'), Decimal))
 
         self.Person(name='ageless person').save()
         self.assertEqual(int(self.Person.objects.average('age')), avg)
@@ -1860,10 +1897,20 @@ class QuerySetTest(unittest.TestCase):
         """Ensure that field can be summed over correctly.
         """
         ages = [23, 54, 12, 94, 27]
+        worths = [10, 5, 10, 3, 5]
         for i, age in enumerate(ages):
-            self.Person(name='test%s' % i, age=age).save()
+            self.Person(
+                name='test%s' % i, age=age, worth=Decimal(worths[i])).save()
 
         self.assertEqual(int(self.Person.objects.sum('age')), sum(ages))
+
+        # Here I test that the sum works on a custom field type.
+        self.assertEqual(
+            int(self.Person.objects.sum('worth')), sum(worths))
+
+        # Here I test that the sum datatype is the datatype set in
+        # Field.qs_to_python.
+        self.assertTrue(isinstance(self.Person.objects.sum('worth'), Decimal))
 
         self.Person(name='ageless person').save()
         self.assertEqual(int(self.Person.objects.sum('age')), sum(ages))
