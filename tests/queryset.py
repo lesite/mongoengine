@@ -20,7 +20,7 @@ class QuerySetTest(unittest.TestCase):
         class MoneyField(IntField):
             """
             This is an example of a custom field type with to_python,
-            qs_to_python and to_mongo methods.
+            aggregate_to_python and to_mongo methods.
             """
             def __init__(
                 self, min_value=None, max_value=None, \
@@ -32,7 +32,7 @@ class QuerySetTest(unittest.TestCase):
             def _round(self, value):
                 return Decimal(str(round(value, self.decimal_digits)))
 
-            def qs_to_python(self, value):
+            def aggregate_to_python(self, value):
                 return self.to_python(value)
 
             def to_python(self, value):
@@ -1886,7 +1886,7 @@ class QuerySetTest(unittest.TestCase):
         self.assertEqual(self.Person.objects.average('worth'), avg_worth)
 
         # Here I test that the average datatype is the datatype set in
-        # Field.qs_to_python.
+        # Field.aggregate_to_python.
         self.assertTrue(
             isinstance(self.Person.objects.average('worth'), Decimal))
 
@@ -1909,7 +1909,7 @@ class QuerySetTest(unittest.TestCase):
             int(self.Person.objects.sum('worth')), sum(worths))
 
         # Here I test that the sum datatype is the datatype set in
-        # Field.qs_to_python.
+        # Field.aggregate_to_python.
         self.assertTrue(isinstance(self.Person.objects.sum('worth'), Decimal))
 
         self.Person(name='ageless person').save()

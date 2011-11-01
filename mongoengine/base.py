@@ -116,8 +116,9 @@ class BaseField(object):
         instance._data[self.name] = value
         instance._mark_as_changed(self.name)
 
-    def qs_to_python(self, value):
-        """Converts a MongoDB queryset to a Python type.
+    def aggregate_to_python(self, value):
+        """Values returned by queryset.sum(field) and
+        queryset.average(field) evaluated by this method.
         """
         return value
 
